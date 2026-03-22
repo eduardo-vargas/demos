@@ -1,0 +1,52 @@
+<svg width="100%" viewBox="0 0 680 682" xmlns="http://www.w3.org/2000/svg">
+  
+  <defs>
+    <clipPath id="lamp-clip">
+      <path d="M 220 160 Q 215 180 210 240 Q 190 340 190 420 Q 190 500 210 540 L 220 560 L 460 560 L 470 540 Q 490 500 490 420 Q 490 340 470 240 Q 465 180 460 160 Z"/>
+    </clipPath>
+    <linearGradient id="glass-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="40%" stop-color="#fff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base -->
+  <rect x="210" y="560" width="260" height="28" rx="6" fill="#7a3000" style="fill:rgb(122, 48, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="195" y="585" width="290" height="18" rx="5" fill="#5a2000" style="fill:rgb(90, 32, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="215" y="603" width="250" height="60" rx="8" fill="#7a3000" style="fill:rgb(122, 48, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="235" y="660" width="210" height="12" rx="4" fill="#5a2000" style="fill:rgb(90, 32, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Cap top -->
+  <rect x="215" y="140" width="250" height="22" rx="6" fill="#7a3000" style="fill:rgb(122, 48, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="200" y="125" width="280" height="18" rx="5" fill="#5a2000" style="fill:rgb(90, 32, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="225" y="68" width="230" height="60" rx="8" fill="#7a3000" style="fill:rgb(122, 48, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <rect x="240" y="60" width="200" height="12" rx="4" fill="#5a2000" style="fill:rgb(90, 32, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Glow behind glass -->
+  <ellipse cx="340" cy="390" rx="115" ry="180" fill="#ff6600" opacity="0.22" style="fill:rgb(255, 102, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.22;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Glass body -->
+  <path d="M 220 160 Q 215 180 210 240 Q 190 340 190 420 Q 190 500 210 540 L 220 560 L 460 560 L 470 540 Q 490 500 490 420 Q 490 340 470 240 Q 465 180 460 160 Z" fill="#ff8c2a" opacity="0.18" style="fill:rgb(255, 140, 42);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.18;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Lava blobs (clipped to glass) -->
+  <g clip-path="url(#lamp-clip)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <!-- Bottom pool -->
+    <ellipse cx="340" cy="548" rx="115" ry="22" fill="#ff5500" style="fill:rgb(255, 85, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+    <!-- Blob 1 - large, near the bottom -->
+    <path d="M 270 510 Q 225 480 222 440 Q 219 400 255 385 Q 291 370 320 398 Q 349 426 335 470 Q 321 514 290 522 Q 272 526 270 510 Z" fill="#ff5500" style="fill:rgb(255, 85, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+    <!-- Blob 2 - medium, middle area -->
+    <path d="M 355 370 Q 315 342 318 305 Q 321 268 355 258 Q 389 248 408 278 Q 427 308 410 345 Q 393 382 365 385 Q 352 387 355 370 Z" fill="#ff7722" style="fill:rgb(255, 119, 34);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+    <!-- Blob 3 - small, upper-middle -->
+    <path d="M 285 268 Q 258 246 262 221 Q 266 196 293 190 Q 320 184 333 206 Q 346 228 332 253 Q 318 278 298 280 Q 285 281 285 268 Z" fill="#ff4400" style="fill:rgb(255, 68, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  </g>
+
+  <!-- Glass outline -->
+  <path d="M 220 160 Q 215 180 210 240 Q 190 340 190 420 Q 190 500 210 540 L 220 560 L 460 560 L 470 540 Q 490 500 490 420 Q 490 340 470 240 Q 465 180 460 160 Z" fill="url(#glass-grad)" stroke="#cc5500" stroke-width="1.5" style="stroke:rgb(204, 85, 0);color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Glass shine -->
+  <path d="M 228 175 Q 222 210 218 270 Q 214 330 216 400" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.18" style="fill:none;stroke:rgb(255, 255, 255);color:rgb(255, 255, 255);stroke-width:6px;stroke-linecap:round;stroke-linejoin:miter;opacity:0.18;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+</svg>

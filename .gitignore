@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+.parcel-cache/
+.DS_Store
+.env
+# Cloudflare project configs (contain account-specific IDs)
+**/wrangler.toml
+!**/wrangler.toml.example

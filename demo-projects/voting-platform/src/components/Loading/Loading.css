@@ -1,0 +1,57 @@
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.loading-text {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.wave {
+  display: inline-block;
+  animation: wave 1s ease-in-out infinite;
+}
+
+.wave-1 {
+  animation-delay: 0ms;
+}
+.wave-2 {
+  animation-delay: 40ms;
+}
+.wave-3 {
+  animation-delay: 80ms;
+}
+.wave-4 {
+  animation-delay: 120ms;
+}
+.wave-5 {
+  animation-delay: 160ms;
+}
+.wave-6 {
+  animation-delay: 200ms;
+}
+.wave-7 {
+  animation-delay: 240ms;
+}
+.wave-8 {
+  animation-delay: 280ms;
+}
+.wave-9 {
+  animation-delay: 320ms;
+}
+.wave-10 {
+  animation-delay: 360ms;
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}

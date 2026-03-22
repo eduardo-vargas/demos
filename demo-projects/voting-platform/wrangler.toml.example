@@ -1,0 +1,40 @@
+# Cloudflare Workers Deployment Configuration
+# Copy this file to wrangler.toml and fill in your values
+
+name = "voting-platform"
+account_id = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+compatibility_date = "2024-11-20"
+main = "src/worker.ts"
+workers_dev = true
+
+# Custom domain - set to false if using workers.dev
+# workers_dev = false
+# routes = [
+#   { pattern = "your-app.your-domain.com", custom_domain = true }
+# ]
+
+[vars]
+APP_NAME = "voting-platform"
+# Your Cloudflare Access team domain (from Access dashboard)
+CF_ACCESS_TEAM_DOMAIN = "https://your-team.cloudflareaccess.com"
+# Application Audience (AUD) tag from Access application settings
+CF_ACCESS_AUD = "your-access-aud-tag-here"
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+[[d1_databases]]
+binding = "DB"
+# Create with: wrangler d1 create voting-platform
+database_name = "voting-platform"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "GUEST_LOGBOOK"
+# Create with: wrangler kv:namespace create GUEST_LOGBOOK
+id = "YOUR_KV_NAMESPACE_ID"
+
+[observability]
+enabled = true
