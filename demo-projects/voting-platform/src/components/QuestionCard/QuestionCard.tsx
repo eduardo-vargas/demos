@@ -8,101 +8,46 @@ import { iconStyle, style } from '@react-spectrum/s2/style' with { type: 'macro'
 
 interface QuestionCardProps {
   question: Question;
+  highlightedContent?: React.ReactNode[];
   onVote: (id: number, type: 'up' | 'down') => void;
   isAuthenticated: boolean;
 }
 
-export function QuestionCard({ question: q, onVote, isAuthenticated }: QuestionCardProps) {
+const upVoteActiveIconStyle = iconStyle({ color: 'positive' });
+const upVoteInactiveIconStyle = iconStyle({ color: 'gray' });
+const downVoteActiveIconStyle = iconStyle({ color: 'negative' });
+const downVoteInactiveIconStyle = iconStyle({ color: 'gray' });
+
+export function QuestionCard({
+  question: q,
+  highlightedContent,
+  onVote,
+  isAuthenticated,
+}: QuestionCardProps) {
   const isMobile = useIsMobile();
 
-  const metadataText = `${sanitizeEmail(q.author_email)} • ${new Date(q.created_at * 1000).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`;
-
-  if (isMobile) {
-    return (
-      <div
-        className="card-elevated"
-        style={{
-          backgroundColor: 'var(--card-bg)',
-          padding: 16,
-          borderRadius: 12,
-          width: '100%',
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            lineHeight: 1.5,
-          }}
-        >
-          {q.content}
-        </p>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-          }}
-        >
-          <Text
-            UNSAFE_style={{
-              fontSize: 12,
-              color: 'var(--spectrum-neutral-subdued-content-color-default)',
-            }}
-          >
-            {metadataText}
-          </Text>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ActionButton
-              aria-label="upvote question"
-              isQuiet
-              size="S"
-              onPress={() => onVote(q.id, 'up')}
-              isDisabled={!isAuthenticated}
-            >
-              <ThumbUp styles={iconStyle({ color: 'positive' })} />
-              <Text UNSAFE_style={{ fontSize: 13 }}>{q.upvotes}</Text>
-            </ActionButton>
-            <ActionButton
-              aria-label="downvote question"
-              isQuiet
-              size="S"
-              onPress={() => onVote(q.id, 'down')}
-              isDisabled={!isAuthenticated}
-            >
-              <ThumbDown styles={iconStyle({ color: 'negative' })} />
-              <Text UNSAFE_style={{ fontSize: 13 }}>{q.downvotes}</Text>
-            </ActionButton>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isUpvoted = q.user_vote === 'up';
+  const isDownvoted = q.user_vote === 'down';
 
   return (
     <div
-      className="card-elevated"
-      style={{
-        backgroundColor: 'var(--card-bg)',
-        padding: 20,
-        borderRadius: 12,
-        width: '100%',
-        boxSizing: 'border-box',
-        alignItems: 'center',
-      }}
+      className={style({
+        backgroundColor: 'layer-2',
+        border: `[1px solid var(--lightningcss-light, rgba(0, 0, 0, 0.1))
+    var(--lightningcss-dark, rgba(255, 255, 255, 0.1))]`,
+        boxShadow: `[0 2px 8px var(--lightningcss-light, rgba(0, 0, 0, 0.1))
+    var(--lightningcss-dark, rgba(0, 0, 0, 0.3))]`,
+        borderRadius: 'lg',
+      })}
+      style={{ padding: isMobile ? 16 : 20, width: '100%' }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'space-between',
-          gap: 16,
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 8 : 16,
           width: '100%',
         }}
       >
@@ -110,7 +55,7 @@ export function QuestionCard({ question: q, onVote, isAuthenticated }: QuestionC
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 6,
+            gap: isMobile ? 12 : 6,
             flex: 1,
             minWidth: 0,
           }}
@@ -123,42 +68,40 @@ export function QuestionCard({ question: q, onVote, isAuthenticated }: QuestionC
               lineHeight: 1.5,
             }}
           >
-            {q.content}
+            {highlightedContent || q.content}
           </p>
-          <Text
-            UNSAFE_style={{
-              fontSize: 12,
-              color: 'var(--spectrum-neutral-subdued-content-color-default)',
-            }}
-          >
-            {metadataText}
+          <Text styles={style({ color: 'neutral-subdued', font: 'body-sm' })}>
+            {sanitizeEmail(q.author_email)} •{' '}
+            {new Date(q.created_at * 1000).toLocaleString(undefined, {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            })}
           </Text>
         </div>
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            flexShrink: 0,
-          }}
+          className={`${style({ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 })} ${isMobile && style({ justifyContent: 'center', width: '100%' })}`}
         >
           <ActionButton
             aria-label="upvote question"
+            aria-pressed={isUpvoted}
             isQuiet
+            size={isMobile ? 'S' : undefined}
             onPress={() => onVote(q.id, 'up')}
             isDisabled={!isAuthenticated}
           >
-            <ThumbUp styles={iconStyle({ color: 'positive' })} />
-            <Text styles={style({ color: 'GrayText' })}>{q.upvotes}</Text>
+            <ThumbUp styles={isUpvoted ? upVoteActiveIconStyle : upVoteInactiveIconStyle} />
+            <Text styles={style({ font: 'body-sm', color: 'neutral-subdued' })}>{q.upvotes}</Text>
           </ActionButton>
           <ActionButton
             aria-label="downvote question"
+            aria-pressed={isDownvoted}
             isQuiet
+            size={isMobile ? 'S' : undefined}
             onPress={() => onVote(q.id, 'down')}
             isDisabled={!isAuthenticated}
           >
-            <ThumbDown styles={iconStyle({ color: 'negative' })} />
-            <Text styles={style({ color: 'GrayText' })}>{q.downvotes}</Text>
+            <ThumbDown styles={isDownvoted ? downVoteActiveIconStyle : downVoteInactiveIconStyle} />
+            <Text styles={style({ font: 'body-sm', color: 'neutral-subdued' })}>{q.downvotes}</Text>
           </ActionButton>
         </div>
       </div>

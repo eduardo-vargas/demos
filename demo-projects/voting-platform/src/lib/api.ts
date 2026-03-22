@@ -13,12 +13,21 @@ interface ApiError {
 }
 
 function handleResponse<T>(res: globalThis.Response): Promise<T> {
+  const contentType = res.headers.get('content-type');
   if (!res.ok) {
-    return res.json().then((data: ApiError) => {
-      throw new Error(data.error || 'Request failed');
+    if (contentType?.includes('application/json')) {
+      return res.json().then((data: ApiError) => {
+        throw new Error(data.error || 'Request failed');
+      });
+    }
+    return res.text().then(text => {
+      throw new Error(text || 'Request failed');
     });
   }
-  return res.json();
+  if (contentType?.includes('application/json')) {
+    return res.json();
+  }
+  return res.text().then(text => JSON.parse(text)) as Promise<T>;
 }
 
 export async function getAuthUser(): Promise<AuthResponse> {
@@ -26,8 +35,11 @@ export async function getAuthUser(): Promise<AuthResponse> {
   return handleResponse<AuthResponse>(res);
 }
 
-export function logout(): void {
-  window.location.href = `${API_BASE}/auth/logout`;
+export function logout(redirectUrl?: string): void {
+  const url = redirectUrl
+    ? `${API_BASE}/auth/logout?redirect_url=${encodeURIComponent(redirectUrl)}`
+    : `${API_BASE}/auth/logout`;
+  window.location.href = url;
 }
 
 export async function createMeeting(name: string, description: string): Promise<Meeting> {

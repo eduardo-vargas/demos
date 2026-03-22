@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Heading,
   Text,
-  Button,
-  TextField,
+  Content,
   IllustratedMessage,
   ActionButton,
   Picker,
@@ -13,12 +12,18 @@ import {
 import { getMeeting, getQuestions, addQuestion, voteQuestion } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { Meeting, Question } from '../types';
-import Fuse from 'fuse.js';
 import { Loading } from '../components/Loading/Loading';
 import { StatusPill } from '../components/MeetingStatus';
+import { QuestionInput } from '../components/QuestionInput';
 import { style, iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' };
 import Checkmark from '@react-spectrum/s2/icons/Checkmark';
 import { QuestionCard } from '../components/QuestionCard/QuestionCard';
+import Settings from '@react-spectrum/s2/icons/Settings';
+import Fuse from 'fuse.js';
+
+interface HighlightedQuestion extends Question {
+  highlightedContent: React.ReactNode[];
+}
 
 export function MeetingPage() {
   const { meetingId } = useParams();
@@ -29,7 +34,6 @@ export function MeetingPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'votes' | 'newest' | 'oldest'>('votes');
-  const [newQuestion, setNewQuestion] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<unknown>('');
@@ -39,7 +43,7 @@ export function MeetingPage() {
     const url = `${window.location.origin}/${shortCode}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const loadData = useCallback(async () => {
@@ -80,18 +84,32 @@ export function MeetingPage() {
     return () => clearInterval(interval);
   }, [authLoading, meetingId, loadQuestions, sort]);
 
-  const handleAddQuestion = async () => {
-    if (!newQuestion.trim() || submitting) return;
+  const handleAddQuestion = async (question: string) => {
     if (!user) {
       setError('Please authenticate to add questions');
       return;
     }
+
+    const tempId = Date.now();
+    const optimisticQuestion = {
+      id: tempId,
+      meeting_id: meetingId!,
+      author_id: '',
+      author_email: user.email,
+      content: question.trim(),
+      created_at: Math.floor(Date.now() / 1000),
+      upvotes: 1,
+      downvotes: 0,
+      user_vote: 'up' as const,
+    };
+
+    setQuestions(prev => [optimisticQuestion, ...prev]);
     setSubmitting(true);
+
     try {
-      await addQuestion(meetingId!, newQuestion);
-      setNewQuestion('');
-      loadQuestions();
+      await addQuestion(meetingId!, question);
     } catch (e) {
+      setQuestions(prev => prev.filter(q => q.id !== tempId));
       setError(e instanceof Error ? e.message : 'Failed to add question');
     } finally {
       setSubmitting(false);
@@ -109,10 +127,38 @@ export function MeetingPage() {
     setQuestions(prev =>
       prev.map(q => {
         if (q.id !== questionId) return q;
+
+        let upvotes = q.upvotes;
+        let downvotes = q.downvotes;
+        let user_vote: 'up' | 'down' | null = q.user_vote;
+
+        if (q.user_vote === type) {
+          upvotes = Math.max(0, upvotes - 1);
+          downvotes = Math.max(0, downvotes - 1);
+          user_vote = null;
+        } else if (q.user_vote === null) {
+          if (type === 'up') {
+            upvotes++;
+          } else {
+            downvotes++;
+          }
+          user_vote = type;
+        } else {
+          if (type === 'up') {
+            upvotes++;
+            downvotes = Math.max(0, downvotes - 1);
+          } else {
+            downvotes++;
+            upvotes = Math.max(0, upvotes - 1);
+          }
+          user_vote = type;
+        }
+
         return {
           ...q,
-          upvotes: type === 'up' ? q.upvotes + 1 : q.upvotes,
-          downvotes: type === 'down' ? q.downvotes + 1 : q.downvotes,
+          upvotes,
+          downvotes,
+          user_vote,
         };
       })
     );
@@ -123,10 +169,60 @@ export function MeetingPage() {
   };
 
   const fuse = useMemo(
-    () => new Fuse(questions, { keys: ['content'], threshold: 0.4 }),
+    () =>
+      new Fuse(questions, {
+        keys: ['content'],
+        threshold: 0.4,
+        includeMatches: true,
+        ignoreLocation: true,
+      }),
     [questions]
   );
-  const displayQuestions = search ? fuse.search(search).map(r => r.item) : questions;
+
+  const highlightedQuestions = useMemo((): HighlightedQuestion[] => {
+    if (!search.trim() || search.length < 2) {
+      return [];
+    }
+
+    const results = fuse.search(search);
+
+    return results.map(({ item, matches }) => {
+      const contentMatch = matches?.find(m => m.key === 'content');
+      const indices = (contentMatch?.indices || []) as [number, number][];
+      const highlightedContent: React.ReactNode[] = [];
+      let lastIndex = 0;
+
+      for (const [start, end] of indices) {
+        if (start > lastIndex) {
+          highlightedContent.push(item.content.slice(lastIndex, start));
+        }
+        highlightedContent.push(
+          <mark
+            key={`${start}-${end}`}
+            style={{
+              backgroundColor: 'rgb(from var(--lavaLampFill, #F48120) r g b / 40%)',
+              borderRadius: 2,
+              padding: '0 2px',
+            }}
+          >
+            {item.content.slice(start, end + 1)}
+          </mark>
+        );
+        lastIndex = end + 1;
+      }
+
+      if (lastIndex < item.content.length) {
+        highlightedContent.push(item.content.slice(lastIndex));
+      }
+
+      return { ...item, highlightedContent };
+    });
+  }, [fuse, search]);
+
+  const displayQuestions =
+    search.trim().length >= 2
+      ? highlightedQuestions
+      : questions.map(q => ({ ...q, highlightedContent: [q.content] }));
 
   if (loading || authLoading) return <Loading />;
   if (error) return <Text UNSAFE_className="text-error">{JSON.stringify(error)}</Text>;
@@ -153,93 +249,66 @@ export function MeetingPage() {
           flexWrap: 'wrap',
         }}
       >
-        <div className="flex-col">
-          <Heading level={2}>{meeting.name}</Heading>
-          {meeting.description && <Text>{meeting.description}</Text>}
-          <div className="flex-row" style={{ marginTop: 4, gap: 8, alignItems: 'center' }}>
+        <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+          <Heading styles={style({ margin: 0 })} level={2}>
+            {meeting.name}
+          </Heading>
+          {meeting.description && (
+            <Text styles={style({ font: 'body-sm' })}>{meeting.description}</Text>
+          )}
+        </div>
+        <div>
+          <div
+            className={style({ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' })}
+          >
             <StatusPill status={meeting.status} />
             <ActionButton
               isQuiet
               size="S"
+              isDisabled={copied}
               onPress={() => copyMeetingUrl(meeting.short_code)}
               UNSAFE_style={{ fontSize: 14, fontFamily: 'monospace' }}
             >
-              <Text>Code: {meeting.short_code}</Text>
+              {copied ? (
+                <>
+                  <Text styles={style({ color: 'green-800' })}>Copied!</Text>
+                  <Checkmark styles={iconStyle({ color: 'positive' })} />
+                </>
+              ) : (
+                <Text>Code: {meeting.short_code}</Text>
+              )}
             </ActionButton>
-            {copied && (
-              <div className="flex-row" style={{ alignItems: 'center', gap: 4 }}>
-                <Text
-                  UNSAFE_style={{
-                    fontSize: 14,
-                    color: 'var(--spectrum-positive-content-color-default)',
-                  }}
-                >
-                  Copied!
-                </Text>
-                <Checkmark styles={iconStyle({ color: 'positive' })} />
-              </div>
+
+            {isOwner && (
+              <ActionButton
+                aria-label="Settings"
+                isQuiet
+                onPress={() => navigate(`/${meetingId}/admin`)}
+              >
+                <Settings />
+              </ActionButton>
             )}
           </div>
         </div>
-        {isOwner && (
-          <Button variant="secondary" onPress={() => navigate(`/${meetingId}/admin`)}>
-            Admin
-          </Button>
-        )}
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 16,
-          marginBottom: 16,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <TextField
-            label="Search"
-            placeholder="Search questions..."
-            value={search}
-            onChange={setSearch}
-          />
-        </div>
-        <Picker
-          label="Sort by"
-          selectedKey={sort}
-          onSelectionChange={key => setSort(key as 'votes' | 'newest' | 'oldest')}
-        >
-          <PickerItem id="votes">Most Voted</PickerItem>
-          <PickerItem id="newest">Newest</PickerItem>
-          <PickerItem id="oldest">Oldest</PickerItem>
-        </Picker>
       </div>
 
       {user && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <TextField
-            label="Ask a question"
-            value={newQuestion}
-            onChange={setNewQuestion}
-            placeholder="Type your question..."
-            onKeyDown={e => e.key === 'Enter' && handleAddQuestion()}
-          />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              variant="accent"
-              onPress={handleAddQuestion}
-              isDisabled={meeting.status === 'Closed' || !newQuestion.trim() || submitting}
-            >
-              {submitting ? 'Adding...' : 'Add question'}
-            </Button>
-          </div>
-        </div>
+        <QuestionInput
+          search={search}
+          onSearchChange={setSearch}
+          meetingStatus={meeting.status}
+          onSubmit={handleAddQuestion}
+          submitting={submitting}
+        />
       )}
 
       {!user && (
         <div
-          className="card-elevated"
+          className={style({
+            border: 'solid',
+            boxShadow: 'elevated',
+            borderRadius: 'lg',
+          })}
           style={{
             backgroundColor: 'var(--card-bg)',
             padding: 24,
@@ -253,22 +322,56 @@ export function MeetingPage() {
       )}
 
       <div
+        className={style({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+        })}
+      >
+        <Heading level={3} styles={style({ margin: 0 })}>
+          Questions ({questions.length})
+        </Heading>
+        <Picker
+          aria-label="Sort by"
+          isQuiet
+          selectedKey={sort}
+          onSelectionChange={key => setSort(key as 'votes' | 'newest' | 'oldest')}
+        >
+          <PickerItem id="votes">Most Voted</PickerItem>
+          <PickerItem id="newest">Newest</PickerItem>
+          <PickerItem id="oldest">Oldest</PickerItem>
+        </Picker>
+      </div>
+
+      <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: 12,
-          width: '100%',
         }}
       >
         {displayQuestions.map(q => (
-          <QuestionCard key={q.id} question={q} onVote={handleVote} isAuthenticated={!!user} />
+          <QuestionCard
+            key={q.id}
+            question={q}
+            highlightedContent={'highlightedContent' in q ? q.highlightedContent : undefined}
+            onVote={handleVote}
+            isAuthenticated={!!user}
+          />
         ))}
-        {displayQuestions.length === 0 && (
-          <IllustratedMessage styles={style({ alignSelf: 'center' })}>
-            <Heading level={3}>No questions yet</Heading>
-            <Text>Be the first to ask a question!</Text>
-          </IllustratedMessage>
-        )}
+        {displayQuestions.length === 0 &&
+          (questions.length === 0 ? (
+            <IllustratedMessage styles={style({ alignSelf: 'center' })}>
+              <Heading level={3}>No questions yet</Heading>
+              <Content>Be the first to ask a question!</Content>
+            </IllustratedMessage>
+          ) : (
+            <IllustratedMessage styles={style({ alignSelf: 'center' })}>
+              <Heading level={3}>No similar questions yet</Heading>
+              <Content>Be the first to ask that question!</Content>
+            </IllustratedMessage>
+          ))}
       </div>
     </div>
   );

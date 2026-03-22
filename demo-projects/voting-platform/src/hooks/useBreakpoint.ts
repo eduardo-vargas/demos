@@ -23,8 +23,17 @@ function useMatchMedia(query: string): boolean {
   return matches;
 }
 
-export function useIsMobile(): boolean {
-  return useMatchMedia('(max-width: 700px)');
+export function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    setIsMobile(m.matches);
+    const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    m.addEventListener('change', listener);
+    return () => m.removeEventListener('change', listener);
+  }, [breakpoint]);
+
+  return isMobile;
 }
 
 export function useBreakpoint(): 'base' | 'S' | 'M' | 'L' | 'XL' {
@@ -32,7 +41,7 @@ export function useBreakpoint(): 'base' | 'S' | 'M' | 'L' | 'XL' {
   const isS = useMatchMedia('(min-width: 481px) and (max-width: 700px)');
   const isM = useMatchMedia('(min-width: 701px) and (max-width: 1000px)');
   const isL = useMatchMedia('(min-width: 1001px) and (max-width: 1300px)');
-  const isXL = useMatchMedia('(min-width: 1301px)');
+  // const isXL = useMatchMedia('(min-width: 1301px)');
 
   if (isBase) return 'base';
   if (isS) return 'S';

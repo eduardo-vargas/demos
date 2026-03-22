@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Provider, ToastContainer } from '@react-spectrum/s2';
 import { AuthProvider } from './context/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { useDynamicFavicon } from './hooks/useDynamicFavicon';
 import { Header } from './components/Header';
 import { HomePage, MeetingPage, MeetingAdminPage, AdminDashboard, MyMeetingsPage } from './pages';
 import { LavaLamp } from './LavaLamp';
 import './styles.css';
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' };
 
 function AppContent() {
   const { colorScheme, lavaLampTheme } = useAuth();
@@ -27,16 +29,6 @@ function AppContent() {
 
   const handleToggle = () => {
     setUserToggled(!showLavaLamp);
-  };
-
-  const mainStyle = {
-    position: 'relative' as const,
-    zIndex: 1,
-    margin: '0px 16px',
-    overflow: 'hidden' as const,
-    borderRadius: '16px 16px 0 0',
-    boxShadow: colorScheme === 'dark' ? '0 4px 30px rgba(0,0,0,0.5)' : '0 4px 30px rgba(0,0,0,0.1)',
-    background: colorScheme === 'dark' ? 'rgba(45, 45, 45, 0.85)' : 'rgba(255, 255, 255, 0.85)',
   };
 
   const contentStyle = {
@@ -59,30 +51,42 @@ function AppContent() {
   return (
     <Provider
       colorScheme={colorScheme}
+      styles={style({ backgroundColor: 'Background' })}
       UNSAFE_style={{
         height: '100vh',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: colorScheme === 'dark' ? '#252525' : '#f0f0f0',
       }}
     >
       <Header showLavaLamp={showLavaLamp} onToggleLavaLamp={handleToggle} />
-      <main style={mainStyle}>
+      <main
+        className={`${style({
+          position: 'relative',
+          zIndex: 1,
+          marginX: 16,
+          overflow: 'hidden',
+          borderTopRadius: 'lg',
+          borderBottomRadius: 'none',
+          backgroundColor: 'layer-1',
+        })} ${showLavaLamp ? style({ boxShadow: 'elevated' }) : style({ boxShadow: '[0 0px 8px -4px var(--lavaLampFill)]' })}`}
+      >
         {showLavaLamp && (
           <div style={backgroundContainerStyle}>
             <LavaLamp colorTheme={lavaLampTheme} style={{ position: 'absolute', inset: 0 }} />
           </div>
         )}
         <div style={contentStyle}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<Navigate to="/" replace />} />
-            <Route path="/my-meetings" element={<MyMeetingsPage />} />
-            <Route path="/:meetingId" element={<MeetingPage />} />
-            <Route path="/:meetingId/admin" element={<MeetingAdminPage />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/auth" element={<Navigate to="/" replace />} />
+              <Route path="/my-meetings" element={<MyMeetingsPage />} />
+              <Route path="/:meetingId" element={<MeetingPage />} />
+              <Route path="/:meetingId/admin" element={<MeetingAdminPage />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Routes>
+          </ErrorBoundary>
         </div>
       </main>
       <ToastContainer placement="bottom end" />

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heading, Button } from '@react-spectrum/s2';
+import { Heading, ActionButton, Text } from '@react-spectrum/s2';
 import { getMeeting } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { Loading } from '../components/Loading/Loading';
 import { MeetingSettingsForm } from '../components/MeetingStatus';
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
+import { style } from '@react-spectrum/s2/style' with { type: 'macro' };
 
 export function MeetingAdminPage() {
   const { meetingId } = useParams();
@@ -57,10 +59,13 @@ export function MeetingAdminPage() {
           marginBottom: 16,
         }}
       >
-        <Heading level={2}>Meeting Settings</Heading>
-        <Button variant="secondary" onPress={() => navigate(`/${meetingId}`)}>
-          Back to Meeting
-        </Button>
+        <Heading level={2} styles={style({ margin: 0 })}>
+          Meeting settings
+        </Heading>
+        <ActionButton isQuiet onPress={() => navigate(`/${meetingId}`)}>
+          <ChevronLeft />
+          <Text>Back to meeting</Text>
+        </ActionButton>
       </div>
 
       <MeetingSettingsForm

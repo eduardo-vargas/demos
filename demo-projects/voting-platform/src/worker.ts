@@ -37,13 +37,13 @@ interface QuestionRow {
 
 const app = new Hono();
 
-async function requireAuth(c: any, env: Env): Promise<string | null> {
+async function requireAuth(c: any, env: Env): Promise<Response | { email: string }> {
   const email = await getEmailFromRequest(c.req.raw, env.CF_ACCESS_TEAM_DOMAIN, env.CF_ACCESS_AUD);
   if (!email) {
     c.status(401);
     return c.json({ error: 'Authentication required' });
   }
-  return email;
+  return { email };
 }
 
 async function generateUniqueShortCode(db: D1Database): Promise<string> {
@@ -115,10 +115,11 @@ app.get('/auth/logout', async c => {
 
 app.get('/user/meetings', async c => {
   const env = c.env as Env;
-  const email = await requireAuth(c, env);
-  if (!email) return;
+  const auth = await requireAuth(c, env);
+  if (auth instanceof Response) return auth;
+  const userEmail = auth.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
 
   const meetings = await env.DB.prepare(
     `
@@ -141,8 +142,9 @@ app.get('/user/meetings', async c => {
 
 app.post('/meetings', async c => {
   const env = c.env as Env;
-  const email = await requireAuth(c, env);
-  if (!email) return;
+  const auth = await requireAuth(c, env);
+  if (auth instanceof Response) return auth;
+  const userEmail = auth.email;
 
   const { name, description, action } = await c.req.json<{
     name?: string;
@@ -150,7 +152,7 @@ app.post('/meetings', async c => {
     action?: string;
   }>();
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
 
   if (action === 'join') {
     const shortCode = name?.toUpperCase();
@@ -263,7 +265,8 @@ app.get('/meetings/:id/owners', async c => {
   const meetingId = c.req.param('id');
   console.log('[GET /meetings/:id/owners] meetingId:', meetingId);
 
-  await requireAuth(c, env);
+  const auth = await requireAuth(c, env);
+  if (auth instanceof Response) return auth;
 
   const creator = await env.DB.prepare('SELECT creator_id FROM meetings WHERE id = ?')
     .bind(meetingId)
@@ -300,9 +303,10 @@ app.delete('/meetings/:id/owners/:ownerId', async c => {
   const ownerId = c.req.param('ownerId');
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
 
   const creator = await env.DB.prepare('SELECT creator_id FROM meetings WHERE id = ?')
     .bind(meetingId)
@@ -338,8 +342,12 @@ app.get('/meetings/:id', async c => {
 
   let email = '';
   try {
-    const authResult = await requireAuth(c, env);
-    email = authResult || '';
+    const auth = await requireAuth(c, env);
+    if (auth instanceof Response) {
+      // Allow viewing without auth - ignore the error response
+    } else {
+      email = auth.email;
+    }
   } catch {
     // Allow viewing without auth
   }
@@ -370,9 +378,10 @@ app.put('/meetings/:id', async c => {
   const meetingId = c.req.param('id');
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
 
   const member = await env.DB.prepare(
     'SELECT role FROM meeting_members WHERE meeting_id = ? AND user_id = ? AND role = ?'
@@ -434,9 +443,10 @@ app.post('/meetings/:id/owners', async c => {
   const meetingId = c.req.param('id');
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
 
   const creator = await env.DB.prepare('SELECT creator_id FROM meetings WHERE id = ?')
     .bind(meetingId)
@@ -475,7 +485,9 @@ app.get('/meetings/:id/questions', async c => {
   let userId: string | null = null;
   try {
     const authResult = await requireAuth(c, env);
-    if (authResult) userId = await ensureUser(env, authResult);
+    if (authResult && !(authResult instanceof Response)) {
+      userId = await ensureUser(env, authResult.email);
+    }
   } catch {
     // Allow viewing without auth
   }
@@ -529,9 +541,10 @@ app.post('/meetings/:id/questions', async c => {
   const meetingId = c.req.param('id');
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
   const { content } = await c.req.json<{ content?: string }>();
 
   if (!content || content.trim().length === 0) {
@@ -578,7 +591,7 @@ app.post('/meetings/:id/questions', async c => {
       id: result.lastInsertRowid,
       meeting_id: meeting.id,
       author_id: userId,
-      author_email: email,
+      author_email: userEmail,
       content: content.trim(),
       created_at: Math.floor(Date.now() / 1000),
       upvotes: 0,
@@ -596,9 +609,10 @@ app.post('/questions/:id/vote', async c => {
   const questionId = parseInt(c.req.param('id'));
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  const userId = await ensureUser(env, email);
+  const userId = await ensureUser(env, userEmail);
   const { type } = await c.req.json<{ type?: string }>();
 
   if (!['up', 'down'].includes(type || '')) {
@@ -659,9 +673,10 @@ app.get('/admin/meetings', async c => {
   const env = c.env as Env;
 
   const email = await requireAuth(c, env);
-  if (!email) return;
+  if (email instanceof Response) return email;
+  const userEmail = email.email;
 
-  await ensureUser(env, email);
+  await ensureUser(env, userEmail);
 
   const meetings = await env.DB.prepare(
     `

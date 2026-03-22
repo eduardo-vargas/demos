@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Navigate, Link } from 'react-router-dom';
 import {
   Heading,
+  Content,
   Text,
   ActionButton,
   Button,
@@ -17,7 +18,7 @@ import {
   Cell,
   Popover,
 } from '@react-spectrum/s2';
-import { style } from '@react-spectrum/s2/style' with { type: 'macro' };
+import { iconStyle, style } from '@react-spectrum/s2/style' with { type: 'macro' };
 import { getUserMeetings } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { Meeting } from '../types';
@@ -26,36 +27,56 @@ import { StatusPill, MeetingSettingsForm } from '../components/MeetingStatus';
 import { getRoleDisplayName } from '../types';
 import PluginGear from '@react-spectrum/s2/icons/PluginGear';
 import InfoCircle from '@react-spectrum/s2/icons/InfoCircle';
+import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
+import OpenIn from '@react-spectrum/s2/icons/OpenIn';
 
 export function MyMeetingsPage() {
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const loadMeetings = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getUserMeetings();
+      setMeetings(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load meetings');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      navigate('/');
-      return;
-    }
+    loadMeetings();
+  }, [authLoading, loadMeetings]);
 
-    getUserMeetings()
-      .then(setMeetings)
-      .catch(e => setError(e instanceof Error ? e.message : 'Failed to load meetings'))
-      .finally(() => setLoading(false));
-  }, [user, authLoading, navigate]);
+  if (authLoading) return <Loading />;
 
-  if (loading || authLoading) return <Loading />;
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (loading) return <Loading />;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 16, padding: 24 })}>
+      <div
+        className={style({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        })}
+      >
         <Heading level={2}>My Meetings</Heading>
-        <Button variant="secondary" onPress={() => navigate('/')}>
-          Back to Home
-        </Button>
+        <Link to="/" className={style({ textDecoration: 'none' })}>
+          <ActionButton isQuiet>
+            <ChevronLeft styles={iconStyle({ size: 'XS' })} />
+            <Text>Back</Text>
+          </ActionButton>
+        </Link>
       </div>
 
       {error && (
@@ -65,27 +86,49 @@ export function MyMeetingsPage() {
       )}
 
       {meetings.length === 0 ? (
-        <IllustratedMessage>
+        <IllustratedMessage
+          styles={style({
+            alignSelf: 'center',
+          })}
+        >
           <Heading level={3}>No meetings yet</Heading>
-          <Text>Create a meeting to get started</Text>
-          <Button variant="accent" onPress={() => navigate('/')}>
-            Create Meeting
-          </Button>
+          <Content
+            styles={style({
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+            })}
+          >
+            Create a meeting to get started
+            <Link to="/" className={style({ textDecoration: 'none' })}>
+              <Button variant="accent">Create Meeting</Button>
+            </Link>
+          </Content>
         </IllustratedMessage>
       ) : (
         <TableView aria-label="My Meetings" selectionMode="none">
           <TableHeader>
+            <Column key="status" maxWidth="15%">
+              Status
+            </Column>
             <Column key="name">Meeting title</Column>
-            <Column key="code">Code</Column>
-            <Column key="status">Status</Column>
-            <Column key="role">Role</Column>
-            <Column key="actions" align="center">
+            <Column key="role" maxWidth="15%">
+              Role
+            </Column>
+            <Column key="code" maxWidth="15%">
+              Code
+            </Column>
+            <Column key="actions" maxWidth="20%" align="center">
               Actions
             </Column>
           </TableHeader>
           <TableBody>
             {meetings.map(meeting => (
               <Row key={meeting.id}>
+                <Cell>
+                  <StatusPill status={meeting.status} />
+                </Cell>
                 <Cell>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Text UNSAFE_style={{ fontWeight: 500 }}>{meeting.name}</Text>
@@ -114,14 +157,7 @@ export function MyMeetingsPage() {
                     )}
                   </div>
                 </Cell>
-                <Cell>
-                  <a href={`/${meeting.short_code}`} style={{ fontFamily: 'monospace' }}>
-                    {meeting.short_code}
-                  </a>
-                </Cell>
-                <Cell>
-                  <StatusPill status={meeting.status} />
-                </Cell>
+
                 <Cell>
                   <Text
                     UNSAFE_style={{
@@ -130,6 +166,12 @@ export function MyMeetingsPage() {
                   >
                     {getRoleDisplayName(meeting.user_role)}
                   </Text>
+                </Cell>
+
+                <Cell>
+                  <a href={`/${meeting.short_code}`} style={{ fontFamily: 'monospace' }}>
+                    {meeting.short_code}
+                  </a>
                 </Cell>
 
                 <Cell align="center">
@@ -172,13 +214,15 @@ export function MyMeetingsPage() {
                         </CustomDialog>
                       </DialogTrigger>
                     ) : (
-                      <Button
-                        variant="secondary"
-                        size="S"
-                        onPress={() => navigate(`/${meeting.short_code}`)}
+                      <Link
+                        to={`/${meeting.short_code}`}
+                        className={style({ textDecoration: 'none' })}
                       >
-                        View
-                      </Button>
+                        <ActionButton isQuiet size="S">
+                          <OpenIn />
+                          <Text>View</Text>
+                        </ActionButton>
+                      </Link>
                     )}
                   </div>
                 </Cell>

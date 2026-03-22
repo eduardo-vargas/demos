@@ -29,7 +29,25 @@ import { style } from '@react-spectrum/s2/style' with { type: 'macro' };
 import './styles.css';
 ```
 
-### 2. Use Native Component Props First
+### 2. Icons MUST Use `iconStyle` for Colors
+
+**CRITICAL**: When coloring icons, you MUST use `iconStyle` with pre-defined style variables. The macro evaluates at build time and cannot handle dynamic expressions.
+
+```tsx
+// ✅ CORRECT
+import { iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' };
+import ThumbUp from '@react-spectrum/s2/icons/ThumbUp';
+
+const activeStyle = iconStyle({ color: 'positive' });
+const inactiveStyle = iconStyle({ color: 'gray' });
+
+<ThumbUp styles={isActive ? activeStyle : inactiveStyle} />;
+
+// ❌ WRONG - UNSAFE_style doesn't work for icons
+<ThumbUp UNSAFE_style={{ color: 'var(--spectrum-positive-content-color-default)' }} />;
+```
+
+### 3. Use Native Component Props First
 
 Before reaching for style macros, check if the component has native props for what you need:
 
@@ -41,7 +59,7 @@ Before reaching for style macros, check if the component has native props for wh
 <Button variant="accent" style="fill">Save</Button>
 ```
 
-### 3. Package Import
+### 4. Package Import
 
 Always import from `@react-spectrum/s2`:
 
@@ -855,6 +873,128 @@ import { Badge } from '@react-spectrum/s2';
 // Check React Spectrum docs for full toast implementation
 ```
 
+### Icons
+
+React Spectrum offers a collection of icons that can be imported from `@react-spectrum/s2/icons`.
+
+#### Icon Import
+
+```tsx
+import { Button, Text } from '@react-spectrum/s2';
+import { Search } from '@react-spectrum/s2/icons';
+
+<Button>
+  <Search />
+  <Text>Search</Text>
+</Button>;
+```
+
+#### Icon Style - **MANDATORY FOR COLORS**
+
+**CRITICAL**: Icons MUST use `iconStyle` for colors. The macro evaluates at build time, so you MUST pre-define separate style variables for each color variant:
+
+```tsx
+// ✅ CORRECT - Pre-defined style variables at module level
+import { iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' };
+import ThumbUp from '@react-spectrum/s2/icons/ThumbUp';
+
+// Define static styles at module level (outside component)
+const thumbUpActiveStyle = iconStyle({ color: 'positive' });
+const thumbUpInactiveStyle = iconStyle({ color: 'gray' });
+
+function VoteButton({ isActive }) {
+  return <ThumbUp styles={isActive ? thumbUpActiveStyle : thumbUpInactiveStyle} />;
+}
+```
+
+```tsx
+// ❌ WRONG - Dynamic expressions inside iconStyle
+function VoteButton({ isActive }) {
+  return (
+    // This will FAIL - macro can't evaluate isActive at build time
+    <ThumbUp styles={iconStyle({ color: isActive ? 'positive' : 'gray' })} />
+  );
+}
+```
+
+```tsx
+// ❌ WRONG - UNSAFE_style for icons
+function VoteButton({ isActive }) {
+  return (
+    // This is WRONG - icons must use iconStyle
+    <ThumbUp UNSAFE_style={{ color: 'var(--spectrum-positive-content-color-default)' }} />
+  );
+}
+```
+
+#### Icon Colors (via iconStyle)
+
+| Color         | Use Case                              |
+| ------------- | ------------------------------------- |
+| `positive`    | Success, upvotes, positive actions    |
+| `negative`    | Error, downvotes, destructive actions |
+| `accent`      | Primary actions, highlights           |
+| `neutral`     | Default state, secondary elements     |
+| `gray`        | Inactive, disabled, neutral elements  |
+| `informative` | Info, help icons                      |
+| `notice`      | Warnings, alerts                      |
+
+#### Icon Sizes
+
+| Size | Pixels         |
+| ---- | -------------- |
+| `XS` | 14px           |
+| `S`  | 16px           |
+| `M`  | 20px (default) |
+| `L`  | 22px           |
+| `XL` | 26px           |
+
+#### Voting Button Pattern
+
+For vote buttons (upvote/downvote), use this pattern:
+
+```tsx
+import { ActionButton, Text } from '@react-spectrum/s2';
+import ThumbUp from '@react-spectrum/s2/icons/ThumbUp';
+import ThumbDown from '@react-spectrum/s2/icons/ThumbDown';
+import { iconStyle } from '@react-spectrum/s2/style' with { type: 'macro' };
+
+// Pre-defined styles (module level, outside component)
+const upVoteActiveStyle = iconStyle({ color: 'positive' });
+const upVoteInactiveStyle = iconStyle({ color: 'gray' });
+const downVoteActiveStyle = iconStyle({ color: 'negative' });
+const downVoteInactiveStyle = iconStyle({ color: 'gray' });
+
+function VoteButtons({ upvotes, downvotes, userVote, onVote }) {
+  const isUpvoted = userVote === 'up';
+  const isDownvoted = userVote === 'down';
+
+  return (
+    <>
+      <ActionButton aria-label="upvote" aria-pressed={isUpvoted}>
+        <ThumbUp styles={isUpvoted ? upVoteActiveStyle : upVoteInactiveStyle} />
+        <Text UNSAFE_style={{ color: 'var(--spectrum-neutral-subdued-content-color-default)' }}>
+          {upvotes}
+        </Text>
+      </ActionButton>
+      <ActionButton aria-label="downvote" aria-pressed={isDownvoted}>
+        <ThumbDown styles={isDownvoted ? downVoteActiveStyle : downVoteInactiveStyle} />
+        <Text UNSAFE_style={{ color: 'var(--spectrum-neutral-subdued-content-color-default)' }}>
+          {downvotes}
+        </Text>
+      </ActionButton>
+    </>
+  );
+}
+```
+
+**Key rules:**
+
+1. Icon colors change based on state (positive for upvoted, negative for downvoted, gray for inactive)
+2. Vote count text ALWAYS uses `neutral-subdued` - it never changes color
+3. Define style variables at module level, not inside the component
+4. Use `aria-pressed` for accessibility on toggle buttons
+
 ### Content & Layout
 
 #### Heading
@@ -1194,3 +1334,124 @@ Use this skill when:
 - Questions about component props or patterns
 
 Do not use CSS files. Always use the style macro for styling.
+
+## Error Boundaries & Enterprise Patterns
+
+### Error Boundaries
+
+React Spectrum apps should have error boundaries to prevent component crashes from bringing down the entire app.
+
+```tsx
+// src/components/ErrorBoundary/ErrorBoundary.tsx
+import { Component, ReactNode } from 'react';
+import { Button, IllustratedMessage, Heading, Content } from '@react-spectrum/s2';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onReset?: () => void;
+}
+
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (import.meta.env.DEV) {
+      console.error('Error caught:', error, errorInfo);
+    }
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    this.props.onReset?.();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <IllustratedMessage>
+          <Heading level={2}>Something went wrong</Heading>
+          <Content>
+            <p>An error occurred while loading this section.</p>
+            {import.meta.env.DEV && this.state.error && (
+              <code style={{ padding: 12, backgroundColor: 'var(--spectrum-gray-100)' }}>
+                {this.state.error.message}
+              </code>
+            )}
+            <Button variant="secondary" onPress={this.handleReset}>
+              Try Again
+            </Button>
+          </Content>
+        </IllustratedMessage>
+      );
+    }
+    return this.props.children;
+  }
+}
+```
+
+### Wrap Routes with ErrorBoundary
+
+In your App.tsx, wrap routes to prevent page crashes:
+
+```tsx
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+function App() {
+  return (
+    <Routes>
+      <ErrorBoundary>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        {/* ... more routes */}
+      </ErrorBoundary>
+    </Routes>
+  );
+}
+```
+
+### Toast Notifications
+
+Use ToastQueue for user feedback - it integrates with React Spectrum:
+
+```tsx
+import { ToastQueue } from '@react-spectrum/s2';
+
+// Success toast
+ToastQueue.positive('Changes saved successfully', { timeout: 3000 });
+
+// Error toast
+ToastQueue.negative('Failed to save changes', { timeout: 5000 });
+
+// Warning toast
+ToastQueue.negative('Session expiring in 60s', { timeout: 2000 });
+```
+
+### Loading States
+
+Always show loading states for async operations:
+
+```tsx
+// ✅ CORRECT - Loading state
+if (loading) return <Loading />;
+
+// ✅ CORRECT - Error boundary
+if (error) {
+  return <IllustratedMessage>
+    <Heading>Error loading data</Heading>
+    <Button onPress={refetch}>Try Again</Button>
+  </IllustratedMessage>;
+}
+```

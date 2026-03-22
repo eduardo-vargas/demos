@@ -28,28 +28,6 @@ body,
     sans-serif;
 }
 
-/* 
-  S2 Provider sets background via lightningcss variables but doesn't set text color.
-  Heading and Text components inherit color, so we need to set it on the Provider element.
-  This matches the pattern used throughout S2 components (e.g. see Icon fill colors).
-*/
-._pa12,
-._pb12,
-._pc12 {
-  color: var(--lightningcss-light, rgb(41, 41, 41)) var(--lightningcss-dark, rgb(219, 219, 219));
-}
-
-/* Card/header background colors */
-:root {
-  --card-bg-light: rgba(255, 255, 255, 0.85);
-  --card-bg-dark: rgba(45, 45, 45, 0.85);
-  --card-bg: var(--card-bg-light);
-}
-
-[data-color-scheme='dark'] {
-  --card-bg: var(--card-bg-dark);
-}
-
 .app-provider {
   width: 100%;
   min-height: 100vh;
@@ -154,40 +132,6 @@ main > :last-child {
 
 .profile-meeting-link:hover {
   text-decoration: underline;
-}
-
-/* Flex utilities */
-.flex-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.flex-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.flex-row-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* Card */
-.card {
-  background: var(--card-bg);
-  padding: 24px;
-  border-radius: 12px;
-  flex: 1;
-}
-
-.card-elevated {
-  border: 1px solid var(--lightningcss-light, rgba(0, 0, 0, 0.1))
-    var(--lightningcss-dark, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 2px 8px var(--lightningcss-light, rgba(0, 0, 0, 0.1))
-    var(--lightningcss-dark, rgba(0, 0, 0, 0.3));
 }
 
 /* Text utilities */
