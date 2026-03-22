@@ -53,6 +53,9 @@ export const JoinCodeInput = forwardRef<JoinCodeInputRef, JoinCodeInputProps>(
         .fill('')
         .map((_, i) => (value[i] ? value[i].toUpperCase() : ''));
       setDigits(newDigits);
+      if (value === '' && inputRefs.current[0]) {
+        inputRefs.current[0].focus();
+      }
     }, [value, length]);
 
     useEffect(() => {
