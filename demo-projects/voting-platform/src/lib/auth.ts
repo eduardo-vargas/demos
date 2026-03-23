@@ -96,10 +96,12 @@ export async function logGuestAuth(email: string, appName: string, kv: KVNamespa
 /**
  * Extract email from Cloudflare Access JWT in request headers or cookies (for local dev)
  */
+import { KVNamespace } from '@cloudflare/workers-types';
+
 export async function getEmailFromRequest(
   request: Request,
-  teamDomain: string,
-  aud: string
+  _teamDomain: string,
+  _aud: string
 ): Promise<string | null> {
   // Check Cf-Access-Jwt-Assertion header first (set by Access on protected paths)
   let token = request.headers.get('Cf-Access-Jwt-Assertion');
@@ -129,7 +131,7 @@ export async function getEmailFromRequest(
 
     // Check expiration
     if (payload.exp && Date.now() / 1000 > payload.exp) {
-      console.log('[AUTH] JWT expired');
+      console.warn('JWT expired');
       return null;
     }
 

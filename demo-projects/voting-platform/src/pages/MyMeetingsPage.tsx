@@ -17,6 +17,8 @@ import {
   Row,
   Cell,
   Popover,
+  Card,
+  Divider,
 } from '@react-spectrum/s2';
 import { iconStyle, style } from '@react-spectrum/s2/style' with { type: 'macro' };
 import { getUserMeetings } from '../lib/api';
@@ -25,22 +27,145 @@ import type { Meeting } from '../types';
 import { Loading } from '../components/Loading/Loading';
 import { StatusPill, MeetingSettingsForm } from '../components/MeetingStatus';
 import { getRoleDisplayName } from '../types';
+import { useIsMobile } from '../hooks/useBreakpoint';
 import PluginGear from '@react-spectrum/s2/icons/PluginGear';
 import InfoCircle from '@react-spectrum/s2/icons/InfoCircle';
 import ChevronLeft from '@react-spectrum/s2/icons/ChevronLeft';
 import OpenIn from '@react-spectrum/s2/icons/OpenIn';
+
+interface MeetingSettingsDialogProps {
+  meeting: Meeting;
+  trigger: React.ReactNode;
+  onSaved?: () => void;
+}
+
+function MeetingSettingsDialog({ meeting, trigger, onSaved }: MeetingSettingsDialogProps) {
+  return (
+    <DialogTrigger>
+      {trigger}
+      <CustomDialog UNSAFE_style={{ width: 500, maxWidth: '90vw' }}>
+        {({ close }) => (
+          <div style={{ position: 'relative' }}>
+            <CloseButton
+              onPress={close}
+              styles={style({ position: 'absolute', top: 0, insetEnd: 0 })}
+            />
+            <Heading
+              level={3}
+              UNSAFE_style={{
+                marginTop: 0,
+                marginRight: 32,
+                wordBreak: 'break-word',
+              }}
+            >
+              {meeting.name} Settings
+            </Heading>
+            <MeetingSettingsForm
+              meetingId={meeting.id}
+              initialName={meeting.name}
+              initialDescription={meeting.description || ''}
+              initialStatus={meeting.status}
+              onSaved={() => {
+                onSaved?.();
+                close();
+              }}
+            />
+          </div>
+        )}
+      </CustomDialog>
+    </DialogTrigger>
+  );
+}
+
+function sortMeetings(meetings: Meeting[]): Meeting[] {
+  return [...meetings].sort((a, b) => {
+    if (a.status === 'Active' && b.status === 'Closed') return -1;
+    if (a.status === 'Closed' && b.status === 'Active') return 1;
+    return b.created_at - a.created_at;
+  });
+}
+
+interface MeetingCardProps {
+  meeting: Meeting;
+  onRefresh: () => void;
+}
+
+function MeetingCard({ meeting, onRefresh }: MeetingCardProps) {
+  return (
+    <Card styles={style({ width: '100%' })}>
+      <div
+        className={style({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        })}
+      >
+        <div className={style({ display: 'flex', alignItems: 'center', marginBottom: 8, flex: 1 })}>
+          <Text UNSAFE_style={{ fontWeight: 500, flex: 1, wordBreak: 'break-word' }}>
+            {meeting.name}
+          </Text>
+        </div>
+      </div>
+
+      {meeting.description && (
+        <>
+          <Text styles={style({ font: 'body-xs', color: 'neutral-subdued' })}>
+            {meeting.description}
+          </Text>
+          <Divider styles={style({ marginY: 8 })} />
+        </>
+      )}
+
+      <div
+        className={style({
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        })}
+      >
+        <StatusPill status={meeting.status} size="XS" />
+
+        <a
+          href={`/${meeting.short_code}`}
+          style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}
+        >
+          {meeting.short_code}
+        </a>
+        {meeting.user_role === 'Owner' ? (
+          <MeetingSettingsDialog
+            meeting={meeting}
+            onSaved={onRefresh}
+            trigger={
+              <ActionButton aria-label="Settings" size="S" isQuiet>
+                <PluginGear />
+              </ActionButton>
+            }
+          />
+        ) : (
+          <Link to={`/${meeting.short_code}`} className={style({ textDecoration: 'none' })}>
+            <ActionButton isQuiet aria-label="View meeting">
+              <OpenIn />
+            </ActionButton>
+          </Link>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 export function MyMeetingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const isMobile = useIsMobile();
 
   const loadMeetings = useCallback(async () => {
     if (!user) return;
     try {
       const data = await getUserMeetings();
-      setMeetings(data);
+      setMeetings(sortMeetings(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load meetings');
     } finally {
@@ -62,7 +187,7 @@ export function MyMeetingsPage() {
   if (loading) return <Loading />;
 
   return (
-    <div className={style({ display: 'flex', flexDirection: 'column', gap: 16, padding: 24 })}>
+    <div className={style({ display: 'flex', flexDirection: 'column', gap: 16 })}>
       <div
         className={style({
           display: 'flex',
@@ -79,11 +204,7 @@ export function MyMeetingsPage() {
         </Link>
       </div>
 
-      {error && (
-        <Text UNSAFE_style={{ color: 'var(--spectrum-negative-content-color-default)' }}>
-          {error}
-        </Text>
-      )}
+      {error && <Text styles={style({ color: 'negative' })}>{error}</Text>}
 
       {meetings.length === 0 ? (
         <IllustratedMessage
@@ -106,6 +227,14 @@ export function MyMeetingsPage() {
             </Link>
           </Content>
         </IllustratedMessage>
+      ) : isMobile ? (
+        <div
+          className={style({ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 })}
+        >
+          {meetings.map(meeting => (
+            <MeetingCard key={meeting.id} meeting={meeting} onRefresh={loadMeetings} />
+          ))}
+        </div>
       ) : (
         <TableView aria-label="My Meetings" selectionMode="none">
           <TableHeader>
@@ -119,7 +248,7 @@ export function MyMeetingsPage() {
             <Column key="code" maxWidth="15%">
               Code
             </Column>
-            <Column key="actions" maxWidth="20%" align="center">
+            <Column key="actions" maxWidth="10%" align="center">
               Actions
             </Column>
           </TableHeader>
@@ -177,50 +306,24 @@ export function MyMeetingsPage() {
                 <Cell align="center">
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     {meeting.user_role === 'Owner' ? (
-                      <DialogTrigger>
-                        <ActionButton isQuiet>
-                          <PluginGear />
-                          <Text>Admin</Text>
-                        </ActionButton>
-                        <CustomDialog UNSAFE_style={{ width: 500 }}>
-                          {({ close }) => (
-                            <div style={{ position: 'relative' }}>
-                              <CloseButton
-                                onPress={close}
-                                styles={style({ position: 'absolute', top: 0, insetEnd: 0 })}
-                              />
-                              <Heading
-                                level={3}
-                                UNSAFE_style={{
-                                  marginTop: 0,
-                                  marginRight: 32,
-                                  wordBreak: 'break-word',
-                                }}
-                              >
-                                {meeting.name} Settings
-                              </Heading>
-                              <MeetingSettingsForm
-                                meetingId={meeting.id}
-                                initialName={meeting.name}
-                                initialDescription={meeting.description || ''}
-                                initialStatus={meeting.status}
-                                onSaved={() => {
-                                  getUserMeetings().then(setMeetings);
-                                  close();
-                                }}
-                              />
-                            </div>
-                          )}
-                        </CustomDialog>
-                      </DialogTrigger>
+                      <MeetingSettingsDialog
+                        meeting={meeting}
+                        onSaved={() =>
+                          getUserMeetings().then(data => setMeetings(sortMeetings(data)))
+                        }
+                        trigger={
+                          <ActionButton aria-label="Admin" isQuiet>
+                            <PluginGear />
+                          </ActionButton>
+                        }
+                      />
                     ) : (
                       <Link
                         to={`/${meeting.short_code}`}
                         className={style({ textDecoration: 'none' })}
                       >
-                        <ActionButton isQuiet size="S">
+                        <ActionButton aria-label="Go to meeting" isQuiet size="S">
                           <OpenIn />
-                          <Text>View</Text>
                         </ActionButton>
                       </Link>
                     )}

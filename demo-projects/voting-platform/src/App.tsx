@@ -61,15 +61,16 @@ function AppContent() {
     >
       <Header showLavaLamp={showLavaLamp} onToggleLavaLamp={handleToggle} />
       <main
-        className={`${style({
+        className={style({
           position: 'relative',
           zIndex: 1,
           marginX: 16,
           overflow: 'hidden',
           borderTopRadius: 'lg',
           borderBottomRadius: 'none',
+          boxShadow: '[0 0px 8px -4px var(--lavaLampFill)]',
           backgroundColor: 'layer-1',
-        })} ${showLavaLamp ? style({ boxShadow: 'elevated' }) : style({ boxShadow: '[0 0px 8px -4px var(--lavaLampFill)]' })}`}
+        })}
       >
         {showLavaLamp && (
           <div style={backgroundContainerStyle}>

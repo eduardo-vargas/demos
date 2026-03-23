@@ -203,6 +203,7 @@ export function MeetingPage() {
               backgroundColor: 'rgb(from var(--lavaLampFill, #F48120) r g b / 40%)',
               borderRadius: 2,
               padding: '0 2px',
+              color: 'inherit',
             }}
           >
             {item.content.slice(start, end + 1)}

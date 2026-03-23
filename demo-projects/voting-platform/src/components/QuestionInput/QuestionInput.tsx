@@ -53,9 +53,10 @@ export function QuestionInput({
           flexGrow: 1,
           borderRadius: 'lg',
           overflow: 'hidden',
+          marginBottom: 8,
         })}
         style={{
-          boxShadow: '0 0px 10px 0 var(--lavaLampFill)',
+          boxShadow: meetingStatus === 'Active' ? '0 0px 10px 0 var(--lavaLampFill)' : 'none',
         }}
       >
         <TextField

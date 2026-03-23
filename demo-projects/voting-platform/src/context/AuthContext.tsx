@@ -127,8 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyTheme = useCallback((scheme: ColorScheme) => {
     document.documentElement.setAttribute('data-color-scheme', scheme);
     document.documentElement.style.colorScheme = scheme;
-    document.documentElement.classList.remove('spectrum--light', 'spectrum--dark', 'spectrum--darkest');
-    document.documentElement.classList.add(scheme === 'dark' ? 'spectrum--dark' : 'spectrum--light');
+    document.documentElement.classList.remove(
+      'spectrum--light',
+      'spectrum--dark',
+      'spectrum--darkest'
+    );
+    document.documentElement.classList.add(
+      scheme === 'dark' ? 'spectrum--dark' : 'spectrum--light'
+    );
     setColorScheme(scheme);
   }, []);
 
@@ -213,7 +219,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ToastQueue.negative('Session expired', { timeout: 2000 });
         deleteCFCookies();
         setUser(null);
-        setTimeout(() => { window.location.href = '/'; }, 2000);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
         return;
       }
 
@@ -245,10 +253,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user?.exp]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    setUser(null);
+
+    // Call API to clear server-side cookies
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Silently fail - client-side logout already completed
+    }
+
+    // Also clear client-side cookies
     deleteCFCookies();
-    const redirectUrl = encodeURIComponent(window.location.href);
-    window.location.href = `/api/auth/logout?redirect_url=${redirectUrl}`;
   }, []);
 
   const login = useCallback(() => {
@@ -256,11 +275,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{
-      user, loading, theme, colorScheme, setTheme,
-      lavaLampTheme, setLavaLampTheme, lavaLampEnabled, setLavaLampEnabled,
-      logout, login,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        theme,
+        colorScheme,
+        setTheme,
+        lavaLampTheme,
+        setLavaLampTheme,
+        lavaLampEnabled,
+        setLavaLampEnabled,
+        logout,
+        login,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

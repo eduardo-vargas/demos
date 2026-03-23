@@ -58,9 +58,8 @@ export function HomePage() {
     setSubmitting(true);
     try {
       await getMeeting(code.toUpperCase());
-      await new Promise(resolve => setTimeout(resolve, 300)); // app jumps too quickly, adding a small delay to show the fade effect
       setIsFading(true);
-      setTimeout(() => navigate(`/${code.toUpperCase()}`), 200);
+      navigate(`/${code.toUpperCase()}`);
     } catch {
       setJoinError('Meeting not found. Please check the code and try again.');
       setJoinCode('');
@@ -163,7 +162,7 @@ export function HomePage() {
                 )}
                 <Button
                   variant="accent"
-                  onPress={() => handleJoin}
+                  onPress={() => handleJoin(joinCode)}
                   styles={style({ width: 'full', marginTop: 'auto' })}
                   UNSAFE_style={{ display: 'flex', flexDirection: 'row-reverse' }}
                   isDisabled={submitting || joinCode.length !== 6}

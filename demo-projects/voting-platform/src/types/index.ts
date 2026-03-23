@@ -7,6 +7,8 @@ export interface Meeting {
   creator_id: string;
   created_at: number;
   user_role?: string;
+  member_count?: number;
+  question_count?: number;
 }
 
 export interface Question {

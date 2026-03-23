@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { D1Database, KVNamespace } from '@cloudflare/workers-types';
+import { D1Database, KVNamespace, ExecutionContext } from '@cloudflare/workers-types';
 import { ensureUser } from './lib/api-utils';
 import { logGuestAuth, getEmailFromRequest } from './lib/auth';
 
@@ -66,7 +66,7 @@ async function generateUniqueShortCode(db: D1Database): Promise<string> {
   throw new Error('Failed to generate unique code');
 }
 
-function json(data: any, status = 200) {
+function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' },
@@ -110,6 +110,22 @@ app.get('/auth/logout', async c => {
   return new Response(null, {
     status: 302,
     headers: { Location: `${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/logout` },
+  });
+});
+
+app.post('/auth/logout', async () => {
+  // Clear all Cloudflare Access cookies
+  const cookiesToClear = ['CF_Authorization', 'CF_Access_Client_Id', 'CF_Access_Token'];
+  const clearedCookies = cookiesToClear
+    .map(name => `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax`)
+    .join(', ');
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': clearedCookies,
+    },
   });
 });
 
@@ -263,7 +279,6 @@ app.get('/meetings/code/:code', async c => {
 app.get('/meetings/:id/owners', async c => {
   const env = c.env as Env;
   const meetingId = c.req.param('id');
-  console.log('[GET /meetings/:id/owners] meetingId:', meetingId);
 
   const auth = await requireAuth(c, env);
   if (auth instanceof Response) return auth;
@@ -341,12 +356,17 @@ app.get('/meetings/:id', async c => {
   const meetingId = c.req.param('id');
 
   let email = '';
+  let userId = '';
+  let isAuthenticated = false;
+
   try {
     const auth = await requireAuth(c, env);
     if (auth instanceof Response) {
       // Allow viewing without auth - ignore the error response
     } else {
       email = auth.email;
+      userId = await ensureUser(env, email);
+      isAuthenticated = true;
     }
   } catch {
     // Allow viewing without auth
@@ -368,6 +388,19 @@ app.get('/meetings/:id', async c => {
   if (!meeting) {
     c.status(404);
     return c.json({ error: 'Meeting not found' });
+  }
+
+  // Auto-add authenticated users as members when they visit a meeting
+  if (isAuthenticated && userId) {
+    try {
+      await env.DB.prepare(
+        `INSERT INTO meeting_members (meeting_id, user_id, role) VALUES (?, ?, 'Member') ON CONFLICT(meeting_id, user_id) DO NOTHING`
+      )
+        .bind(meeting.id, userId)
+        .run();
+    } catch {
+      // Silently fail - user might already be a member or be the creator
+    }
   }
 
   return json(meeting);
@@ -580,15 +613,16 @@ app.post('/meetings/:id/questions', async c => {
       .run();
   }
 
-  const result = await env.DB.prepare(
-    'INSERT INTO questions (meeting_id, author_id, content) VALUES (?, ?, ?)'
-  )
+  await env.DB.prepare('INSERT INTO questions (meeting_id, author_id, content) VALUES (?, ?, ?)')
     .bind(meeting.id, userId, content.trim())
     .run();
 
+  // Get the last inserted row ID
+  const lastId = await env.DB.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+
   return json(
     {
-      id: result.lastInsertRowid,
+      id: lastId?.id,
       meeting_id: meeting.id,
       author_id: userId,
       author_email: userEmail,
@@ -694,27 +728,31 @@ app.get('/admin/meetings', async c => {
 
 // ==================== WORKER ENTRY ====================
 
-const worker: ExportedHandler<Env> = {
-  async fetch(request, env, ctx) {
+const worker = {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // Handle /api/* routes
     if (url.pathname.startsWith('/api/')) {
       const pathWithoutApi = url.pathname.replace('/api', '');
-      console.log('[Worker] API request:', pathWithoutApi);
+      
       const modifiedUrl = new URL(url.origin + pathWithoutApi + url.search);
-      const modifiedRequest = new Request(modifiedUrl, {
+      const modifiedRequest = new Request(modifiedUrl.toString(), {
         method: request.method,
         headers: request.headers,
         body: request.body,
         redirect: request.redirect,
       });
-      return await app.fetch(modifiedRequest, env, ctx);
+      return await app.fetch(
+        modifiedRequest as unknown as Parameters<typeof app.fetch>[0],
+        env as unknown as Parameters<typeof app.fetch>[1],
+        ctx
+      );
     }
 
     // Serve static assets first
     try {
-      const assetResponse = await env.ASSETS.fetch(request);
+      const assetResponse = await env.ASSETS.fetch(request as unknown as Request);
       if (assetResponse.status === 200) {
         return assetResponse;
       }
@@ -724,7 +762,9 @@ const worker: ExportedHandler<Env> = {
 
     // SPA fallback
     try {
-      const indexHtml = await env.ASSETS.fetch(new URL('/index.html', request.url));
+      const indexHtml = await env.ASSETS.fetch(
+        new URL('/index.html', url.origin).toString() as unknown as Request
+      );
       return indexHtml;
     } catch {
       return new Response('Not Found', { status: 404 });

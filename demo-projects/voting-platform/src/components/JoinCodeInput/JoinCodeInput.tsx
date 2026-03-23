@@ -11,17 +11,19 @@ interface JoinCodeInputProps {
   onChange: (value: string) => void;
   onComplete?: (value: string) => void;
   autoFocus?: boolean;
+  autoSubmit?: boolean;
 }
 
 const containerStyle = style({
   display: 'flex',
   justifyContent: 'center',
+  marginTop: 16,
   gap: 8,
 });
 
 const inputStyles = style({
-  width: 48,
-  height: 56,
+  width: '15%',
+  height: '[3rem]',
   textAlign: 'center',
   fontSize: 'heading',
   fontWeight: 'bold',
@@ -30,11 +32,14 @@ const inputStyles = style({
   borderRadius: 'lg',
   outline: 'none',
   transition: 'colors',
-  backgroundColor: 'gray-100',
+  backgroundColor: 'Background',
 });
 
 export const JoinCodeInput = forwardRef<JoinCodeInputRef, JoinCodeInputProps>(
-  function JoinCodeInput({ length = 6, value, onChange, onComplete, autoFocus = true }, ref) {
+  function JoinCodeInput(
+    { length = 6, value, onChange, onComplete, autoFocus = true, autoSubmit = false },
+    ref
+  ) {
     const [digits, setDigits] = useState<string[]>(() =>
       Array(length)
         .fill('')
@@ -67,7 +72,7 @@ export const JoinCodeInput = forwardRef<JoinCodeInputRef, JoinCodeInputProps>(
     const updateDigits = (newDigits: string[]) => {
       setDigits(newDigits);
       onChange(newDigits.join(''));
-      if (newDigits.join('').length === length && onComplete) {
+      if (autoSubmit && newDigits.join('').length === length && onComplete) {
         onComplete(newDigits.join(''));
       }
     };
@@ -155,6 +160,8 @@ export const JoinCodeInput = forwardRef<JoinCodeInputRef, JoinCodeInputProps>(
             ref={el => {
               inputRefs.current[index] = el;
             }}
+            name={`join-code-digit-${index}`}
+            id={`join-code-digit-${index}`}
             type="text"
             inputMode="text"
             maxLength={1}
